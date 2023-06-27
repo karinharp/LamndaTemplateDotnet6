@@ -1,0 +1,77 @@
+##[ 変数定義 ]###############################################################
+
+custom:
+  config: ${file(serverlessConfig.yml)}
+  env:
+    LAMBDA_ENV: ${opt:stage}
+    LAMBDA_SERVICE: ${file(serverlessConfig.yml):service}
+    LAMBDA_ROLE: "server"
+
+##[ 全般、IAM, APIKeyの設定 ]################################################
+
+service: ${self:custom.config.service} 
+provider:
+  name: aws
+  runtime: dotnet6
+  memorySize: 1024
+  timeout: 30
+  stage: ${opt:stage}
+  region: ap-northeast-1
+  apiGateway:
+    apiKeys:
+      - ${self:service}PublicAccess-${opt:stage}
+    usagePlan:
+      quota:
+        limit: 1000000
+        period: MONTH
+      throttle:
+        burstLimit: 2000
+        rateLimit: 100
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:*
+          Resource:
+            - "*"
+        - Effect: Allow
+          Action:
+            - cloudwatch:*
+          Resource:
+            - "*"
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource:
+            - "*"
+        
+##[ Lambda + APIGateway 設定 ]###############################################
+
+package:
+  artifact: publish.zip
+functions:
+  LambdaFuncPost:
+    handler: ${self:custom.config.service}::am.LambdaFuncPost::Handler
+    environment: ${self:custom.env}
+    events:
+      - http:
+          path: test
+          method: post
+          private: true
+          integration: lambda
+          request:
+            passThrough: WHEN_NO_MATCH
+            template:
+              application/json: '$input.json(''$'')'
+          response:
+            headers:
+              Content-Type: "'application/json'"
+            template: '$input.json(''$'')'
+            statusCodes:
+              200:
+                pattern: '' # Default response method
+                template: '$input.path(''$'')'
+                headers:
+                  Content-Type: "'application/json'"
+

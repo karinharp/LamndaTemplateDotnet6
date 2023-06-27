@@ -1,0 +1,15 @@
+## [ Working Dir ] ###################################################
+
+bin/*
+arc/*
+obj/*
+.serverless/*
+
+## [ Generated File ] ###################################################
+
+ApiInfo-*.json
+Makefile.env
+apiKey.txt
+apiList.txt
+publish.zip
+serverlessConfig.yml
